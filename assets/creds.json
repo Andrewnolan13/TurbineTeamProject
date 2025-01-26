@@ -1,0 +1,6 @@
+{
+    "NREL":{
+        "endpoint" : "https://developer.nrel.gov/api/hsds",
+        "api_key":"JpJd49ZgeuxjEaxeTMJyP944H1yPHEuU7djbujeP"
+    }
+} 
