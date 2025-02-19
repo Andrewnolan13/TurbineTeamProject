@@ -194,3 +194,12 @@ class HistoricalDaily(Enum):
     WIND_DIRECTION_10M_DOMINANT='wind_direction_10m_dominant'
     SHORTWAVE_RADIATION_SUM='shortwave_radiation_sum'
     ET0_FAO_EVAPOTRANSPIRATION='et0_fao_evapotranspiration'
+
+__all__ = [
+    'ForecastCurrent',
+    'ForecastMinutely15',
+    'ForecastHourly',
+    'ForecastDaily',
+    'HistoricalHourly',
+    'HistoricalDaily'
+]
