@@ -1,6 +1,6 @@
 from os.path import dirname, abspath, join
 
-__all__ = ['SOURCE']
+__all__ = ['SOURCE','GEO_COORDINATES','RATE_LIMITS']
 
 # makes dealing with filepaths handy
 class PATH:
@@ -58,5 +58,12 @@ from enum import Enum
 
 class GEO_COORDINATES(Enum):
     DUNDALK_IT = (53.98352, -6.391390)
+
+# API RATE LIMITS
+
+class RATE_LIMITS(Enum):
+    DAILY = 10000
+    HOURLY = 5000
+    MINUTE = 600
 
 

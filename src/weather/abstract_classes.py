@@ -42,13 +42,23 @@ https://archive-api.open-meteo.com/v1/archive
     &wind_speed_unit=ms
     &timezone=auto
 '''
-
-from abc import ABC
-from .weather_variable_enums import ForecastHourly, ForecastDaily, HistoricalHourly, HistoricalDaily, ForecastCurrent, ForecastMinutely15
-from . import enums
 import datetime as dt
 from beartype import beartype
 import requests
+from abc import ABC
+import sqlite3
+
+from ..constants import SOURCE
+from .. import exceptions
+from .utils import ApiCounter, RequestLogger #These two ensure I don't get my IP blocked 
+from . import enums
+from .weather_variable_enums import (ForecastHourly,
+                                     ForecastDaily, 
+                                     HistoricalHourly, 
+                                     HistoricalDaily, 
+                                     ForecastCurrent, 
+                                     ForecastMinutely15)
+
 
 # Making abstract classes to avoid all the ugly boiler plate in the main classes
 
@@ -56,6 +66,7 @@ class OpenMeteoAPI(ABC):
     @beartype
     def __init__(self,base_url:str):
         self.base_url:str = base_url
+        self._conn:str = sqlite3.connect(SOURCE.DATA.DB.str)#TODO: think about re opening the connection every few minutes or something.
 
         # Parameters
         self._latitude:float|None = None #required
@@ -72,11 +83,31 @@ class OpenMeteoAPI(ABC):
         self._end_date:dt.datetime|None = None
         self._cell_selection:enums.CellSelection|None = None
         self._apikey:str|None = None
+    
+    def __del__(self):
+        if self._conn is not None:
+            self._conn.close()
 
-    def request(self)->dict:
+    def _request(self)->dict:
+        #
+        # Handle reconnection to the database here  
+        #
+
+        # build url. Check remaining calls.
         url:str = self.build_url()
+        remaining = RequestLogger.queryRemaining(self._conn)
+        call_weight:float = ApiCounter.calculate_call_weight_from_url(url)
+
+        print(f"Remaining: {remaining}")
+        if any([remaining['daily'] - call_weight<0, remaining['hourly'] - call_weight<0, remaining['minutely'] - call_weight<0]):
+            raise exceptions.TooManyRequests("Too many requests")
+        print(f"API counts: {call_weight}")
+
+        # Log request
+        RequestLogger.log_request(self._conn, url, call_weight)
         response = requests.get(url)
-        return response.json() #TODO: raise exception if response is not 200
+        response.raise_for_status()
+        return response.json()
 
     def build_url(self)->str:
         url:str = self.base_url+'?'

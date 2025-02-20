@@ -220,9 +220,77 @@ class ApiCounter:
     @staticmethod
     def calculate_call_weight_from_url(url: str, sdk_type: str='weather_api') -> float:
         params = ApiCounter.parse_url_params(url)
-        return ApiCounter.calculate_call_weight(params, sdk_type)    
-    
+        return ApiCounter.calculate_call_weight(params, sdk_type)
 
+import  sqlite3
+from ..constants import RATE_LIMITS 
+
+# Why is everything a class? Because Java has done this to me.
+
+class RequestLogger:
+    '''
+    simple class to read and write to the REQUESTS table in the database.
+
+    what does it do?
+        * Keeps track of the number of requests made per call, with a timestamp, will show url too for debug. 
+        * It will also be used to throw an error if there have been too many requests made. This is because I don't want to get blocked from open-meteo.
+
+    functionality:
+        It will be used in the api classes defined in abstract_classes.py.
+        It will be asked to log every time a request is made.
+        It will be asked for the number of requests left until the top of the current minute, hour and day. There are seperate agg rate limits deined in open-meteos docs.
+        It will need a connection to the database. As will the api classes.
+
+        I don't think this will have a specific dependency on speed, so it's probably fine to just create a new connection every time.
+        If I do prefer not to create the connection everytime, I could pass the connection to the WeatherAPI class and allow it to manage the connection ie reconnect every five minutes.
+    
+        actually if that's the case then, I can probably just make this a static class.
+    '''
+
+    #make timestamp automatic. I want YYYY-MM-DD HH:MM:SS
+    CREATE_TABLE = """
+    CREATE TABLE IF NOT EXISTS REQUESTS (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL,
+        call_weight REAL NOT NULL,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+    @staticmethod
+    def __create_table(conn:sqlite3.Connection)->None:
+        cursor = conn.cursor()
+        cursor.execute(RequestLogger.CREATE_TABLE)
+        conn.commit()
+    
+    @staticmethod
+    def queryRemaining(conn:sqlite3.Connection)->dict[str,float]:
+        '''
+        query the database for the number of requests made in the last minute, hour and day.
+        '''
+        RequestLogger.__create_table(conn)
+        cursor = conn.cursor()
+        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp > datetime('now','-60 seconds')")
+        minute = cursor.fetchone()[0]
+        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp > datetime('now','-1 hour')")
+        hour = cursor.fetchone()[0]
+        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp > datetime('now','-1 day')")
+        day = cursor.fetchone()[0]
+
+        daily_remaining = RATE_LIMITS.DAILY.value - (day if day is not None else 0)
+        hourly_remaining = RATE_LIMITS.HOURLY.value - (hour if hour is not None else 0)
+        minutely_remaining = RATE_LIMITS.MINUTE.value - (minute if minute is not None else 0)
+
+        return dict(daily=daily_remaining,hourly=hourly_remaining,minutely=minutely_remaining)
+
+    @staticmethod
+    def log_request(conn:sqlite3.Connection,url:str,call_weight:float)->None:
+        '''
+        log the request in the database.
+        '''
+        RequestLogger.__create_table(conn)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO REQUESTS (url,call_weight) VALUES (?,?)",(url,call_weight))
+        conn.commit()
 
 if __name__ == '__main__':
     # Example usage
