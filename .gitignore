@@ -3,6 +3,6 @@
 ~$*xlsb
 ~$*xls
 ~$*csv
-__pycache__
+*__pycache__*
 *.db-shm
 *.db-wal

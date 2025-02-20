@@ -45,9 +45,6 @@ class PATH:
     def format(self,**kwargs)->str:
         return self.str.format(**kwargs)
 
-
-
-
 DB = PATH(value = 'database.db')
 DATA = PATH(value = 'data',DB = DB)
 
@@ -55,5 +52,11 @@ LOGS = PATH(value = 'apiLogs.log')
 ASSETS = PATH(value = 'assets',LOGS = LOGS)
 
 SOURCE = PATH(value = abspath(join(dirname(__file__),'..')),DATA = DATA,ASSETS = ASSETS)
+
+# enums
+from enum import Enum
+
+class GEO_COORDINATES(Enum):
+    DUNDALK_IT = (53.98352, -6.391390)
 
 
