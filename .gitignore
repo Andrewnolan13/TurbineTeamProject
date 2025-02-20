@@ -1,0 +1,8 @@
+~$*xlsx
+~$*xlsm
+~$*xlsb
+~$*xls
+~$*csv
+__pycache__
+*.db-shm
+*.db-wal
