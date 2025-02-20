@@ -7,7 +7,7 @@ class ForecastAPI(AbstractForecastAPI):
     def __init__(self):
         super().__init__()
 
-class WeatherAPI(AbstractHistoricalAPI):
+class HistoricalAPI(AbstractHistoricalAPI):
     def __init__(self):
         super().__init__()
         

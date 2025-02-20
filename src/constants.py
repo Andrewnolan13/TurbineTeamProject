@@ -1,6 +1,6 @@
 from os.path import dirname, abspath, join
 
-__all__ = ['DIRECTORIES']
+__all__ = ['SOURCE']
 
 # makes dealing with filepaths handy
 class PATH:
@@ -55,4 +55,5 @@ LOGS = PATH(value = 'apiLogs.log')
 ASSETS = PATH(value = 'assets',LOGS = LOGS)
 
 SOURCE = PATH(value = abspath(join(dirname(__file__),'..')),DATA = DATA,ASSETS = ASSETS)
+
 
