@@ -66,7 +66,7 @@ class OpenMeteoAPI(ABC):
     @beartype
     def __init__(self,base_url:str):
         self.base_url:str = base_url
-        self._conn:str = sqlite3.connect(SOURCE.DATA.DB.str)#TODO: think about re opening the connection every few minutes or something.
+        self._conn:sqlite3.Connection = sqlite3.connect(SOURCE.DATA.DB.str)#TODO: think about re opening the connection every few minutes or something.
 
         # Parameters
         self._latitude:float|None = None #required

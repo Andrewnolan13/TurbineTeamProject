@@ -137,6 +137,7 @@ class ApiCounter:
 
     @staticmethod
     def calculate_call_weight(params: Dict[str, Any], sdk_type: str) -> float:
+        #:TODO Figure out why this disagrees with the website version sometimes. And fix it
         n_days = 1
         if 'start_date' in params:
             start_date = datetime.strptime(params['start_date'], '%Y-%m-%d')
@@ -314,5 +315,6 @@ if __name__ == '__main__':
     url = "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=precipitation,rain,showers,snowfall&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,snow_depth,visibility,et0_fao_evapotranspiration,vapour_pressure_deficit&daily=wind_speed_10m_max,wind_gusts_10m_max&forecast_days=16"
     url = "https://archive-api.open-meteo.com/v1/archive?latitude=52.52&longitude=13.41&start_date=2025-01-01&end_date=2025-02-20&hourly=temperature_2m,relative_humidity_2m,dew_point_2m"
     url = 'https://archive-api.open-meteo.com/v1/archive?latitude=52.52&longitude=13.41&start_date=2025-01-01&end_date=2025-02-20&hourly=temperature_2m,relative_humidity_2m,dew_point_2m&daily=weather_code,temperature_2m_max&timezone=GMT'
+    url = 'https://archive-api.open-meteo.com/v1/archive?latitude=52.52&longitude=13.41&start_date=2000-02-17&end_date=2025-02-19&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation,rain,snowfall,snow_depth,weather_code,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,et0_fao_evapotranspiration,vapour_pressure_deficit,wind_speed_10m,wind_speed_100m,wind_direction_10m,wind_direction_100m,wind_gusts_10m,soil_temperature_0_to_7cm,soil_temperature_7_to_28cm,soil_temperature_28_to_100cm,soil_temperature_100_to_255cm,soil_moisture_0_to_7cm,soil_moisture_7_to_28cm,soil_moisture_28_to_100cm,soil_moisture_100_to_255cm,boundary_layer_height,wet_bulb_temperature_2m,total_column_integrated_water_vapour,is_day,sunshine_duration,albedo,snow_depth_water_equivalent&daily=weather_code,temperature_2m_max,temperature_2m_min,temperature_2m_mean,apparent_temperature_max,apparent_temperature_min,apparent_temperature_mean,sunrise,sunset,daylight_duration,sunshine_duration,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,shortwave_radiation_sum,et0_fao_evapotranspiration&wind_speed_unit=ms&timezone=auto'
     call_weight = ApiCounter.calculate_call_weight_from_url(url)
     print(f"Adjusted API call weight: {call_weight}")
