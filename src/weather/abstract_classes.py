@@ -205,24 +205,6 @@ class OpenMeteoAPI(ABC):
     @beartype
     def timezone(self,value:enums.TimeZone|None):
         self._timezone = value
-    
-    @property
-    def start_date(self)->str|None:
-        return self._start_date.strftime('%Y-%m-%d') if self._start_date is not None else None
-    
-    @start_date.setter
-    @beartype
-    def start_date(self,value:dt.datetime|None):
-        self._start_date = value
-
-    @property
-    def end_date(self)->dt.datetime|None:
-        return self._end_date.strftime('%Y-%m-%d') if self._end_date is not None else None
-    
-    @end_date.setter
-    @beartype
-    def end_date(self,value:dt.datetime|None):
-        self._end_date = value
 
     @property
     def cell_selection(self)->str|None:
@@ -275,6 +257,23 @@ class AbstractForecastAPI(OpenMeteoAPI):
         self._past_hours:int|None = None
         self._past_minutely_15:int|None = None
 
+    @property
+    def start_date(self)->str|None:
+        return self._start_date.strftime('%Y-%m-%d') if self._start_date is not None else None
+    
+    @start_date.setter
+    @beartype
+    def start_date(self,value:dt.datetime|None):
+        self._start_date = value
+
+    @property
+    def end_date(self)->dt.datetime|None:
+        return self._end_date.strftime('%Y-%m-%d') if self._end_date is not None else None
+    
+    @end_date.setter
+    @beartype
+    def end_date(self,value:dt.datetime|None):
+        self._end_date = value
 
     @property
     def hourly(self)->list[str]|None:
@@ -435,4 +434,25 @@ class AbstractHistoricalAPI(OpenMeteoAPI):
     @beartype
     def daily(self,value:list[HistoricalDaily]|None):
         self._daily = value
+    @property
+    def start_date(self)->str|None:
+        if self._start_date is None:
+            raise NotImplementedError("start_date is None, it must be manually set before use")
+        return self._start_date.strftime('%Y-%m-%d')
+    
+    @start_date.setter
+    @beartype
+    def start_date(self,value:dt.datetime|None):
+        self._start_date = value
+
+    @property
+    def end_date(self)->dt.datetime|None:
+        if self._end_date is None:
+            raise NotImplementedError("end_date is None, it must be manually set before use")
+        return self._end_date.strftime('%Y-%m-%d')
+    
+    @end_date.setter
+    @beartype
+    def end_date(self,value:dt.datetime|None):
+        self._end_date = value
 

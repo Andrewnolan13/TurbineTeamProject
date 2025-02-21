@@ -16,7 +16,7 @@ class HistoricalAPI(AbstractHistoricalAPI):
         super().__init__()
     def request(self):
         # build the url.
-        # parse the url into something that can be turned into a SQL query
+        # parse the url into something that can be turned into a SQL query <- can do using my url parser
         # query the data base.
             # if it exists, return it. function terminates here.
         # if it doesn't exist, request the data from the API
