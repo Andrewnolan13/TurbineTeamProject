@@ -40,7 +40,7 @@ class HistoricalAPI(AbstractHistoricalAPI):
         parsedParams['end_date'] = endDate.strftime('%Y-%m-%d %H:%M:%S')
 
         queryDaily = pd.DataFrame(data = pd.date_range(start=startDate, end=endDate, freq='D'), columns=['time'])
-        queryDaily = queryDaily.merge(pd.DataFrame(data = parsedParams['daily'],columns = ['parameter']), how='cross')
+        queryDaily = queryDaily.merge(pd.DataFrame(data = parsedParams.get('daily',[]),columns = ['parameter']), how='cross')
         queryDaily = queryDaily.merge(
             pd.DataFrame(dict(latitude = parsedParams['latitude'], longitude = parsedParams['longitude'])),
             how='cross')
@@ -48,7 +48,7 @@ class HistoricalAPI(AbstractHistoricalAPI):
 
 
         queryHourly = pd.DataFrame(data = pd.date_range(start=startDate,end=endDate, freq='h'), columns=['time'])
-        queryHourly = queryHourly.merge(pd.DataFrame(data = parsedParams['hourly'],columns = ['parameter']), how='cross')
+        queryHourly = queryHourly.merge(pd.DataFrame(data = parsedParams.get('hourly',[]),columns = ['parameter']), how='cross')
         queryHourly = queryHourly.merge(
             pd.DataFrame(dict(latitude = parsedParams['latitude'], longitude = parsedParams['longitude'])),
             how='cross')
@@ -65,35 +65,9 @@ class HistoricalAPI(AbstractHistoricalAPI):
         queryHourly['latitude'] = queryHourly['latitude'].astype('float')
         queryHourly['longitude'] = queryHourly['longitude'].astype('float')
 
-        # make stging tables
-        conn = self._conn
-        cursor = conn.cursor()
-
-        hourlyStageCommand = '''
-        CREATE TABLE IF NOT EXISTS hourly_historical_weather_staging_table(
-            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-            time TEXT,
-            parameter TEXT,
-            latitude REAL,
-            longitude REAL
-        );
-        '''
-        cursor.execute(hourlyStageCommand)
-        conn.commit()
-
-        dailyStageCommand = '''
-        CREATE TABLE IF NOT EXISTS daily_historical_weather_staging_table(
-            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-            time TEXT,
-            parameter TEXT,
-            latitude REAL,
-            longitude REAL
-        );
-        '''
-        cursor.execute(dailyStageCommand)
-        conn.commit()
 
         #insert data
+        conn = self._conn
         queryDaily.to_sql('daily_historical_weather_staging_table', conn, if_exists='replace', index=False)
         queryHourly.to_sql('hourly_historical_weather_staging_table', conn, if_exists='replace', index=False)  
 
@@ -116,7 +90,6 @@ class HistoricalAPI(AbstractHistoricalAPI):
         AND ABS(daily_historical_weather_staging_table.latitude - DAILY.latitude) < {EPSILON}
         AND ABS(daily_historical_weather_staging_table.longitude - DAILY.longitude) < {EPSILON}
         '''
-        responseDaily = pd.read_sql_query(dailySearchCommand, conn, params=[parsedParams['start_date'], parsedParams['end_date']])
 
 
         hourlySearchCommand = f'''
@@ -138,7 +111,12 @@ class HistoricalAPI(AbstractHistoricalAPI):
         AND ABS(hourly_historical_weather_staging_table.longitude - HOURLY.longitude) < {EPSILON}
         '''
 
+        responseDaily = pd.read_sql_query(dailySearchCommand, conn, params=[parsedParams['start_date'], parsedParams['end_date']])
         responseHourly = pd.read_sql_query(hourlySearchCommand, conn, params=[parsedParams['start_date'], parsedParams['end_date']])
+
+        # drop data from staging tables
+        conn.execute('DELETE FROM daily_historical_weather_staging_table')
+        conn.execute('DELETE FROM hourly_historical_weather_staging_table')
 
         foundHourly = responseHourly.copy().loc[lambda s:s.value.notna()]
         foundDaily = responseDaily.copy().loc[lambda s:s.value.notna()]
@@ -158,6 +136,10 @@ class HistoricalAPI(AbstractHistoricalAPI):
         hourlyResponses = [response for response in responses if 'hourly' in response]
         self._write_to_db(dailyResponses, 'daily')
         self._write_to_db(hourlyResponses, 'hourly')
+
+        # drop duplicates from db #:MAYBE. Might take too long even on small requests.
+        # conn.execute('DELETE FROM daily_historical_weather_data WHERE rowid NOT IN (SELECT MIN(rowid) FROM daily_historical_weather_data GROUP BY time, latitude, longitude, parameter)')
+        # conn.execute('DELETE FROM hourly_historical_weather_data WHERE rowid NOT IN (SELECT MIN(rowid) FROM hourly_historical_weather_data GROUP BY time, latitude, longitude, parameter)')
 
         # convert foundHourly and foundDaily to list of dicts
         responses += self._convertToDictResponse(foundHourly, 'hourly')

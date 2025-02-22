@@ -56,5 +56,33 @@ CREATE TABLE IF NOT EXISTS REQUESTS (
 
 cursor.execute(CREATE_TABLE)
 conn.commit()
+
+# make staging tables
+cursor = conn.cursor()
+
+hourlyStageCommand = '''
+CREATE TABLE IF NOT EXISTS hourly_historical_weather_staging_table(
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    time TEXT,
+    parameter TEXT,
+    latitude REAL,
+    longitude REAL
+);
+'''
+cursor.execute(hourlyStageCommand)
+conn.commit()
+
+dailyStageCommand = '''
+CREATE TABLE IF NOT EXISTS daily_historical_weather_staging_table(
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    time TEXT,
+    parameter TEXT,
+    latitude REAL,
+    longitude REAL
+);
+'''
+cursor.execute(dailyStageCommand)
+conn.commit()
+
 conn.close()
 del conn, cursor, CREATE_TABLE
