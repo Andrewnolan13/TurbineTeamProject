@@ -71,6 +71,7 @@ class HistoricalAPI(AbstractHistoricalAPI):
 
         hourlyStageCommand = '''
         CREATE TABLE IF NOT EXISTS hourly_historical_weather_staging_table(
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
             time TEXT,
             parameter TEXT,
             latitude REAL,
@@ -82,6 +83,7 @@ class HistoricalAPI(AbstractHistoricalAPI):
 
         dailyStageCommand = '''
         CREATE TABLE IF NOT EXISTS daily_historical_weather_staging_table(
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
             time TEXT,
             parameter TEXT,
             latitude REAL,
@@ -214,6 +216,18 @@ class HistoricalAPI(AbstractHistoricalAPI):
         
         if len(dataFrames) > 0:
             submission = pd.concat(dataFrames,ignore_index=True)
+            # print(submission.latitude.unique())
+            # print(submission.longitude.unique())
+            # print(self.latitude)
+            # print(self.longitude)
+            submission.latitude = self.latitude
+            submission.longitude = self.longitude
+            # print(submission.latitude.unique())
+            # print(submission.longitude.unique())
+            # print(submission.value.dtype)
+            submission.value = pd.to_numeric(submission.value, errors='coerce')
+            submission.value = submission.value.astype('float').fillna(-2_147_483_648.0)
+            submission['time'] = pd.to_datetime(submission['time'], format='%Y-%m-%dT%H:%M' if type == 'hourly' else '%Y-%m-%d').dt.strftime('%Y-%m-%d %H:%M:%S')
             submission.to_sql(f'{type}_historical_weather_data', self._conn, if_exists='append', index=False)
 
     def _convertToDictResponse(self,df:pd.DataFrame,type:str)->list[dict]:
