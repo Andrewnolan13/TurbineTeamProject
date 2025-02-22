@@ -115,12 +115,11 @@ class HistoricalAPI(AbstractHistoricalAPI):
         # queryHourly.to_sql('hourly_historical_weather_staging_table', conn, if_exists='replace', index=False)
         
         # re index tables.
-        print('reindexing tables')
-        conn.execute('REINDEX hourly_historical_weather_data;')
-        conn.execute('REINDEX daily_historical_weather_data;')
-        conn.execute('REINDEX hourly_historical_weather_staging_table;')
-        conn.execute('REINDEX daily_historical_weather_staging_table;')
-        conn.commit()
+        # conn.execute('REINDEX hourly_historical_weather_data;')
+        # conn.execute('REINDEX daily_historical_weather_data;')
+        # conn.execute('REINDEX hourly_historical_weather_staging_table;')
+        # conn.execute('REINDEX daily_historical_weather_staging_table;')
+        # conn.commit()
 
         # create a command that joins the staging table (request table) with the historical data and then pull it out
         dailySearchCommand = f'''
@@ -203,7 +202,7 @@ class HistoricalAPI(AbstractHistoricalAPI):
             FROM hourly_historical_weather_data 
             GROUP BY time, latitude, longitude, utc_offset_seconds, timezone, timezone_abbreviation, elevation, parameter, value
         );
-        ''')
+        ''') 
         conn.execute('''
         DELETE FROM daily_historical_weather_data
         WHERE ID NOT IN (
@@ -338,7 +337,8 @@ class HistoricalAPI(AbstractHistoricalAPI):
                 .reset_index(drop=True)
                 .to_dict(orient='records')
         )
-        gdf.time = pd.to_datetime(gdf.time).dt.strftime('%Y-%m-%dT%H:%M:%S')
+        # this was slowing the function down alot.
+        # gdf.time = pd.to_datetime(gdf.time).dt.strftime('%Y-%m-%dT%H:%M:%S') #format='%Y-%m-%dT%H:%M' if type == 'hourly' else '%Y-%m-%d'
         for dict_,(_,grp) in zip(res,gdf.groupby('geo')):
             dict_[type] = grp.pivot_table(index = 'time', columns = 'parameter', values = 'value', aggfunc='first').reset_index().to_dict(orient='list')
         
