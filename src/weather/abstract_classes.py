@@ -113,7 +113,7 @@ class OpenMeteoAPI(ABC):
         url:str = self.base_url+'?'
         for attr in dir(self):
             if not attr.startswith('_') and getattr(self, attr) is not None:
-                if attr in ['build_url','base_url','request']:
+                if attr in ['build_url','base_url','request','request_from_database']:
                     continue
                 if isinstance((val:=getattr(self, attr)), list):
                     url += attr + '=' + str(','.join(val)) + '&'

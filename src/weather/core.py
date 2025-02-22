@@ -23,6 +23,44 @@ class ForecastAPI(AbstractForecastAPI):
 class HistoricalAPI(AbstractHistoricalAPI):
     def __init__(self):
         super().__init__()
+    def request_from_database(self)->list[dict]:
+        '''
+        Making very long historical requests has problems:
+        1. it depletes the API call weight very quickly.
+        2. The sloution to 1. is to parse the request and check what already exists in the databse, return that along with a response from the api.
+        3. The problem with 3. is that it takes AGES to check what data exists/doesn't exist in the database.
+
+        This function is then meant for just requesting from the database directly. So only use it if you are sure that the data you are requesting is in the database.
+        '''
+        conn = self._conn
+        url = self.build_url()
+        parsedParams = ApiCounter.parse_url_params(url)
+        startDate = dt.datetime.strptime(parsedParams['start_date'], '%Y-%m-%d')#.strftime('%Y-%m-%d %H:%M:%S')
+        endDate = dt.datetime.strptime(parsedParams['end_date'], '%Y-%m-%d')#.strftime('%Y-%m-%d %H:%M:%S')
+        parsedParams['start_date'] = startDate.strftime('%Y-%m-%d %H:%M:%S')
+        parsedParams['end_date'] = endDate.strftime('%Y-%m-%d %H:%M:%S')
+
+        hourly = pd.read_sql_query(f'''
+                  SELECT * FROM hourly_historical_weather_data
+                  WHERE time BETWEEN ? AND ?
+                  AND {'1=0' if parsedParams.get('hourly') is None else 'parameter IN (' + ','.join("'"+str(x)+"'" for x in parsedParams['hourly']) + ')'}
+                  AND latitude = ?
+                  AND longitude = ?
+                  ''', conn, params=[parsedParams['start_date'], parsedParams['end_date'], parsedParams['latitude'][0], parsedParams['longitude'][0]])
+        
+        daily = pd.read_sql_query(f'''
+                    SELECT * FROM daily_historical_weather_data
+                    WHERE time BETWEEN ? AND ?
+                    AND {'1=0' if parsedParams.get('daily') is None else 'parameter IN (' + ','.join("'"+str(x)+"'" for x in parsedParams['daily']) + ')'}
+                    AND latitude = ?
+                    AND longitude = ?
+                    ''', conn, params=[parsedParams['start_date'], parsedParams['end_date'], parsedParams['latitude'][0], parsedParams['longitude'][0]])
+        responses = []
+        responses += self._convertToDictResponse(hourly, 'hourly')
+        responses += self._convertToDictResponse(daily, 'daily')
+        return responses
+                                  
+
     def request(self)->list[dict]:
         # build the url.
         # parse the url into something that can be turned into a SQL query <- can do using my url parser
@@ -68,8 +106,21 @@ class HistoricalAPI(AbstractHistoricalAPI):
 
         #insert data
         conn = self._conn
-        queryDaily.to_sql('daily_historical_weather_staging_table', conn, if_exists='replace', index=False)
-        queryHourly.to_sql('hourly_historical_weather_staging_table', conn, if_exists='replace', index=False)  
+        conn.execute('DELETE FROM hourly_historical_weather_staging_table')
+        conn.execute('DELETE FROM daily_historical_weather_staging_table')
+        conn.commit()
+        queryDaily.to_sql('daily_historical_weather_staging_table', conn, if_exists='append', index=False)
+        queryHourly.to_sql('hourly_historical_weather_staging_table', conn, if_exists='append', index=False)
+        # queryDaily.to_sql('daily_historical_weather_staging_table', conn, if_exists='replace', index=False) - this deletes my indices which makes everything slow af
+        # queryHourly.to_sql('hourly_historical_weather_staging_table', conn, if_exists='replace', index=False)
+        
+        # re index tables.
+        print('reindexing tables')
+        conn.execute('REINDEX hourly_historical_weather_data;')
+        conn.execute('REINDEX daily_historical_weather_data;')
+        conn.execute('REINDEX hourly_historical_weather_staging_table;')
+        conn.execute('REINDEX daily_historical_weather_staging_table;')
+        conn.commit()
 
         # create a command that joins the staging table (request table) with the historical data and then pull it out
         dailySearchCommand = f'''
@@ -83,12 +134,15 @@ class HistoricalAPI(AbstractHistoricalAPI):
             SELECT time, parameter, latitude, longitude, value
             FROM daily_historical_weather_data
             WHERE time BETWEEN ? AND ?
+            AND {'1=0' if parsedParams.get('daily') is None else 'parameter IN (' + ','.join("'"+str(x)+"'" for x in parsedParams['daily']) + ')'}
         ) AS DAILY
         RIGHT JOIN daily_historical_weather_staging_table
         ON daily_historical_weather_staging_table.time = DAILY.time
         AND daily_historical_weather_staging_table.parameter = DAILY.parameter
-        AND ABS(daily_historical_weather_staging_table.latitude - DAILY.latitude) < {EPSILON}
-        AND ABS(daily_historical_weather_staging_table.longitude - DAILY.longitude) < {EPSILON}
+--        AND ABS(daily_historical_weather_staging_table.latitude - DAILY.latitude) < {EPSILON} -- may not be necessary
+--        AND ABS(daily_historical_weather_staging_table.longitude - DAILY.longitude) < {EPSILON}
+        AND daily_historical_weather_staging_table.latitude = DAILY.latitude
+        AND daily_historical_weather_staging_table.longitude = DAILY.longitude
         '''
 
 
@@ -103,12 +157,15 @@ class HistoricalAPI(AbstractHistoricalAPI):
             SELECT time, parameter, latitude, longitude, value
             FROM hourly_historical_weather_data
             WHERE time BETWEEN ? AND ?
+            AND {'1=0' if parsedParams.get('hourly') is None else 'parameter IN (' + ','.join("'"+str(x)+"'" for x in parsedParams['hourly']) + ')'}
         ) AS HOURLY
         RIGHT JOIN hourly_historical_weather_staging_table
         ON hourly_historical_weather_staging_table.time = HOURLY.time
         AND hourly_historical_weather_staging_table.parameter = HOURLY.parameter
-        AND ABS(hourly_historical_weather_staging_table.latitude - HOURLY.latitude) < {EPSILON}
-        AND ABS(hourly_historical_weather_staging_table.longitude - HOURLY.longitude) < {EPSILON}
+--        AND ABS(hourly_historical_weather_staging_table.latitude - HOURLY.latitude) < {EPSILON}
+--        AND ABS(hourly_historical_weather_staging_table.longitude - HOURLY.longitude) < {EPSILON}
+        AND hourly_historical_weather_staging_table.latitude = HOURLY.latitude
+        AND hourly_historical_weather_staging_table.longitude = HOURLY.longitude
         '''
 
         responseDaily = pd.read_sql_query(dailySearchCommand, conn, params=[parsedParams['start_date'], parsedParams['end_date']])
@@ -117,6 +174,7 @@ class HistoricalAPI(AbstractHistoricalAPI):
         # drop data from staging tables
         conn.execute('DELETE FROM daily_historical_weather_staging_table')
         conn.execute('DELETE FROM hourly_historical_weather_staging_table')
+        conn.commit()
 
         foundHourly = responseHourly.copy().loc[lambda s:s.value.notna()]
         foundDaily = responseDaily.copy().loc[lambda s:s.value.notna()]
@@ -138,8 +196,23 @@ class HistoricalAPI(AbstractHistoricalAPI):
         self._write_to_db(hourlyResponses, 'hourly')
 
         # drop duplicates from db #:MAYBE. Might take too long even on small requests.
-        # conn.execute('DELETE FROM daily_historical_weather_data WHERE rowid NOT IN (SELECT MIN(rowid) FROM daily_historical_weather_data GROUP BY time, latitude, longitude, parameter)')
-        # conn.execute('DELETE FROM hourly_historical_weather_data WHERE rowid NOT IN (SELECT MIN(rowid) FROM hourly_historical_weather_data GROUP BY time, latitude, longitude, parameter)')
+        conn.execute('''
+        DELETE FROM hourly_historical_weather_data
+        WHERE ID NOT IN (
+            SELECT MIN(ID) 
+            FROM hourly_historical_weather_data 
+            GROUP BY time, latitude, longitude, utc_offset_seconds, timezone, timezone_abbreviation, elevation, parameter, value
+        );
+        ''')
+        conn.execute('''
+        DELETE FROM daily_historical_weather_data
+        WHERE ID NOT IN (
+            SELECT MIN(ID) 
+            FROM daily_historical_weather_data 
+            GROUP BY time, latitude, longitude, utc_offset_seconds, timezone, timezone_abbreviation, elevation, parameter, value
+        );
+        ''')
+        conn.commit()
 
         # convert foundHourly and foundDaily to list of dicts
         responses += self._convertToDictResponse(foundHourly, 'hourly')
@@ -198,17 +271,13 @@ class HistoricalAPI(AbstractHistoricalAPI):
         
         if len(dataFrames) > 0:
             submission = pd.concat(dataFrames,ignore_index=True)
-            # print(submission.latitude.unique())
-            # print(submission.longitude.unique())
-            # print(self.latitude)
-            # print(self.longitude)
+            # force the written entries to have the same geo coords as the request. this is because the response returns a different geo coord, which is the centre of a grid cell or something.
             submission.latitude = self.latitude
             submission.longitude = self.longitude
-            # print(submission.latitude.unique())
-            # print(submission.longitude.unique())
-            # print(submission.value.dtype)
+            # ensure dtype float. Some values (eg sunrise time) return timestamps which I'm not interested in building architechture to suuport.
             submission.value = pd.to_numeric(submission.value, errors='coerce')
-            submission.value = submission.value.astype('float').fillna(-2_147_483_648.0)
+            submission.value = submission.value.astype('float').fillna(-2_147_483_648.0) # having float('nan') values messes up my join.
+            # ensure time is in the correct format
             submission['time'] = pd.to_datetime(submission['time'], format='%Y-%m-%dT%H:%M' if type == 'hourly' else '%Y-%m-%d').dt.strftime('%Y-%m-%d %H:%M:%S')
             submission.to_sql(f'{type}_historical_weather_data', self._conn, if_exists='append', index=False)
 

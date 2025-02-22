@@ -83,6 +83,32 @@ CREATE TABLE IF NOT EXISTS daily_historical_weather_staging_table(
 '''
 cursor.execute(dailyStageCommand)
 conn.commit()
+#drop existing indexes first.
+conn.execute('DROP INDEX IF EXISTS idx_hourly_time_param_lat_lon;')
+conn.execute('DROP INDEX IF EXISTS idx_daily_time_param_lat_lon;')
+conn.execute('DROP INDEX IF EXISTS idx_hourly_staging_time_param_lat_lon;')
+conn.execute('DROP INDEX IF EXISTS idx_daily_staging_time_param_lat_lon;')
 
+# create indexes
+conn.execute('''
+CREATE INDEX IF NOT EXISTS idx_hourly_time_param_lat_lon 
+ON hourly_historical_weather_data (time, parameter, latitude, longitude);
+''')
+
+conn.execute('''
+CREATE INDEX IF NOT EXISTS idx_daily_time_param_lat_lon
+ON daily_historical_weather_data (time, parameter, latitude, longitude);
+''')
+
+conn.execute('''
+CREATE INDEX IF NOT EXISTS idx_hourly_staging_time_param_lat_lon
+ON hourly_historical_weather_staging_table (time, parameter, latitude, longitude);
+''')
+
+conn.execute('''
+CREATE INDEX IF NOT EXISTS idx_daily_staging_time_param_lat_lon
+ON daily_historical_weather_staging_table (time, parameter, latitude, longitude);
+''')
+conn.commit()
 conn.close()
 del conn, cursor, CREATE_TABLE
