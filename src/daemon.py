@@ -28,7 +28,7 @@ class ForecastDaemon(threading.Thread):
         self._stop_event.clear()
     
     def _request(self)->pd.DataFrame:
-        self.api.end_minutely_15 = dt.datetime.now() + dt.timedelta(days=10)
+        self.api.end_minutely_15 = dt.datetime.now() + dt.timedelta(days = 7)
         self.api.start_minutely_15 = dt.datetime.now()
 
         response = self.api.request()
@@ -57,6 +57,7 @@ class ForecastDaemon(threading.Thread):
     def run(self):
         # db
         self.conn = sqlite3.connect(SOURCE.DATA.DB.str)
+        self.conn.execute("PRAGMA journal_mode=WAL")
 
         # ML
         self.model = FeedForwardNN(3)
@@ -88,6 +89,7 @@ class ForecastDaemon(threading.Thread):
             sleepTimes = {k:secondsRemaining[k]/requestRemaining[k] for k in ['minutely','hourly','daily']}
             sleepTime = max(sleepTimes.values())
             time.sleep(sleepTime)
+            print("sleeping for",sleepTime)
 
         self.conn.close()
 
