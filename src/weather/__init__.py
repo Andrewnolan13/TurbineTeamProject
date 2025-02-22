@@ -110,5 +110,34 @@ CREATE INDEX IF NOT EXISTS idx_daily_staging_time_param_lat_lon
 ON daily_historical_weather_staging_table (time, parameter, latitude, longitude);
 ''')
 conn.commit()
+
+
+# make logger table
+
+CREATE_TABLE = """
+CREATE TABLE IF NOT EXISTS REQUESTS (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL,
+    call_weight REAL NOT NULL,
+    timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+);
+"""
+conn.execute(CREATE_TABLE)
+conn.commit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 conn.close()
 del conn, cursor, CREATE_TABLE

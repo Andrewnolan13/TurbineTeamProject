@@ -67,6 +67,10 @@ class OpenMeteoAPI(ABC):
     def __init__(self,base_url:str):
         self.base_url:str = base_url
         self._conn:sqlite3.Connection = sqlite3.connect(SOURCE.DATA.DB.str)#TODO: think about re opening the connection every few minutes or something.
+        cursor = self._conn.cursor()
+        # enable WAL mode
+        cursor.execute("PRAGMA journal_mode=WAL")
+        self._conn.commit()
 
         # Parameters
         self._latitude:float|None = None #required
@@ -87,6 +91,15 @@ class OpenMeteoAPI(ABC):
     def __del__(self):
         if self._conn is not None:
             self._conn.close()
+    
+    def _reConnect(self):
+        #TODO: implement this somehow.
+        self._conn.close()
+        self._conn = sqlite3.connect(SOURCE.DATA.DB.str)
+        cursor = self._conn.cursor()
+        # enable WAL mode
+        cursor.execute("PRAGMA journal_mode=WAL")
+        self._conn.commit()
 
     def _request(self)->dict:
         #
@@ -120,13 +133,6 @@ class OpenMeteoAPI(ABC):
                 else:
                     url += attr + '=' + str(val) + '&'
         return url[:-1]
-
-# causes a recursion error for some reason
-    # def __str__(self):
-    #     return '\n'.join(attr + ': ' + str(getattr(self, attr)) for attr in dir(self) if not attr.startswith('_') and getattr(self, attr) is not None)
-
-    # def __repr__(self):
-    #     return self.__str__()
 
     # not allowed to be none.
     @property

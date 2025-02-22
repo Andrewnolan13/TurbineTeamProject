@@ -247,34 +247,17 @@ class RequestLogger:
     
         actually if that's the case then, I can probably just make this a static class.
     '''
-
-    #make timestamp automatic. I want YYYY-MM-DD HH:MM:SS
-    CREATE_TABLE = """
-    CREATE TABLE IF NOT EXISTS REQUESTS (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        url TEXT NOT NULL,
-        call_weight REAL NOT NULL,
-        timestamp TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-    """
-    @staticmethod
-    def __create_table(conn:sqlite3.Connection)->None:
-        cursor = conn.cursor()
-        cursor.execute(RequestLogger.CREATE_TABLE)
-        conn.commit()
-    
     @staticmethod
     def queryRemaining(conn:sqlite3.Connection)->dict[str,float]:
         '''
         query the database for the number of requests made in the last minute, hour and day.
         '''
-        RequestLogger.__create_table(conn)
         cursor = conn.cursor()
-        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp > datetime('now','-60 seconds')")
+        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp >= datetime('now', 'start of minute')")
         minute = cursor.fetchone()[0]
-        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp > datetime('now','-1 hour')")
+        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp >= datetime('now','start of hour')")
         hour = cursor.fetchone()[0]
-        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp > datetime('now','-1 day')")
+        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp >= datetime('now','start of day')")
         day = cursor.fetchone()[0]
 
         daily_remaining = RATE_LIMITS.DAILY.value - (day if day is not None else 0)
@@ -288,7 +271,6 @@ class RequestLogger:
         '''
         log the request in the database.
         '''
-        RequestLogger.__create_table(conn)
         cursor = conn.cursor()
         cursor.execute("INSERT INTO REQUESTS (url,call_weight) VALUES (?,?)",(url,call_weight))
         conn.commit()

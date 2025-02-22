@@ -23,6 +23,7 @@ class ForecastAPI(AbstractForecastAPI):
 class HistoricalAPI(AbstractHistoricalAPI):
     def __init__(self):
         super().__init__()
+
     def request_from_database(self)->list[dict]:
         '''
         Making very long historical requests has problems:
@@ -60,7 +61,6 @@ class HistoricalAPI(AbstractHistoricalAPI):
         responses += self._convertToDictResponse(daily, 'daily')
         return responses
                                   
-
     def request(self)->list[dict]:
         # build the url.
         # parse the url into something that can be turned into a SQL query <- can do using my url parser
@@ -111,8 +111,6 @@ class HistoricalAPI(AbstractHistoricalAPI):
         conn.commit()
         queryDaily.to_sql('daily_historical_weather_staging_table', conn, if_exists='append', index=False)
         queryHourly.to_sql('hourly_historical_weather_staging_table', conn, if_exists='append', index=False)
-        # queryDaily.to_sql('daily_historical_weather_staging_table', conn, if_exists='replace', index=False) - this deletes my indices which makes everything slow af
-        # queryHourly.to_sql('hourly_historical_weather_staging_table', conn, if_exists='replace', index=False)
         
         # re index tables.
         # conn.execute('REINDEX hourly_historical_weather_data;')
