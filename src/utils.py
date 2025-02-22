@@ -1,5 +1,6 @@
 from typing import get_type_hints
 import os
+import datetime as dt
 
 def enforce_types(func):
     def wrapper(*args, **kwargs):
@@ -25,3 +26,13 @@ def kill_python_processes():
     # cmd = "taskkill /im {} /f".format(image_name)
     cmd = "taskkill /f /pid {}".format(os.getpid())
     os.system(cmd)
+
+def secondsTillEndOf(t:str):
+    if t == 'minutely':
+        return 60 - dt.datetime.now().second
+    if t == 'hourly':
+        return 3600 - dt.datetime.now().minute*60 - dt.datetime.now().second
+    if t == 'daily':
+        return 86400 - dt.datetime.now().hour*3600 - dt.datetime.now().minute*60 - dt.datetime.now().second
+    else:
+        raise ValueError('Invalid time unit. Must be minutely, hourly or daily')

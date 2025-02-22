@@ -51,7 +51,12 @@ DATA = PATH(value = 'data',DB = DB)
 LOGS = PATH(value = 'apiLogs.log')
 ASSETS = PATH(value = 'assets',LOGS = LOGS)
 
-SOURCE = PATH(value = abspath(join(dirname(__file__),'..')),DATA = DATA,ASSETS = ASSETS)
+ffnn = PATH(value = 'ffnn.pth')
+xScaler_ffnn = PATH(value = 'xscaler_ffnn.pth')
+yScaler_ffnn = PATH(value = 'yscaler_ffnn.pth')
+MODELS = PATH(value = 'models',FFNN = ffnn,xScaler_ffnn = xScaler_ffnn,yScaler_ffnn = yScaler_ffnn)
+
+SOURCE = PATH(value = abspath(join(dirname(__file__),'..')),DATA = DATA,ASSETS = ASSETS,MODELS = MODELS)
 
 # enums
 from enum import Enum
@@ -65,5 +70,6 @@ class RATE_LIMITS(Enum):
     DAILY = 10000
     HOURLY = 5000
     MINUTE = 600
+
 
 

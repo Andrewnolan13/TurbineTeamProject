@@ -253,9 +253,9 @@ class RequestLogger:
         query the database for the number of requests made in the last minute, hour and day.
         '''
         cursor = conn.cursor()
-        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp >= datetime('now', 'start of minute')")
+        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp >= strftime('%Y-%m-%d %H:%M:00', 'now', 'localtime')")
         minute = cursor.fetchone()[0]
-        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp >= datetime('now','start of hour')")
+        cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp >= strftime('%Y-%m-%d %H:00:00', 'now', 'localtime')")
         hour = cursor.fetchone()[0]
         cursor.execute("SELECT SUM(call_weight) FROM REQUESTS WHERE timestamp >= datetime('now','start of day')")
         day = cursor.fetchone()[0]

@@ -125,13 +125,20 @@ CREATE TABLE IF NOT EXISTS REQUESTS (
 conn.execute(CREATE_TABLE)
 conn.commit()
 
+#make a staging table for the Forecast requests
+CREATE_TABLE = """
+CREATE TABLE IF NOT EXISTS real_time_predictions (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    Timestamps TEXT,
+    WindSpeed REAL,
+    WindDirAbs REAL,
+    EnvirTemp REAL,
+    PowerPrediction REAL
+);
+"""
 
-
-
-
-
-
-
+conn.execute(CREATE_TABLE)
+conn.commit()
 
 
 
