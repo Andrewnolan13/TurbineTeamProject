@@ -1,4 +1,5 @@
 from typing import get_type_hints
+import os
 
 def enforce_types(func):
     def wrapper(*args, **kwargs):
@@ -18,3 +19,9 @@ def enforce_types(func):
         return result
 
     return wrapper
+
+def kill_python_processes():
+    # image_name = get_python_image_name()
+    # cmd = "taskkill /im {} /f".format(image_name)
+    cmd = "taskkill /f /pid {}".format(os.getpid())
+    os.system(cmd)
