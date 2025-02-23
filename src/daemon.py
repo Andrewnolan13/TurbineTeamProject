@@ -58,6 +58,7 @@ class ForecastDaemon(threading.Thread):
         # db
         self.conn = sqlite3.connect(SOURCE.DATA.DB.str)
         self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.commit()
 
         # ML
         self.model = FeedForwardNN(3)
@@ -88,6 +89,7 @@ class ForecastDaemon(threading.Thread):
 
             sleepTimes = {k:secondsRemaining[k]/requestRemaining[k] for k in ['minutely','hourly','daily']}
             sleepTime = max(sleepTimes.values())
+            sleepTime = max(sleepTime,0.7)
             time.sleep(sleepTime)
             print("sleeping for",sleepTime)
 

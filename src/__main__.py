@@ -6,11 +6,10 @@ from .daemon import ForecastDaemon
 
 def main():
     def CtrlShiftC_handler():
-        print("\nYou pressed Ctrl+shift+C! Shutting down gracefully...")
+        print("\nYou pressed Ctrl+shift+C! Shutting down disgracefully...")
         print("Exiting...")
         kill_python_processes()        
-        exit(0)
-
+        exit(0)        
 
     # Attach the signal handler for forced shutdown
     keyboard.add_hotkey("ctrl+shift+c", CtrlShiftC_handler)
