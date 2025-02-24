@@ -16,11 +16,19 @@ def plot_real_time_predictions(df:pd.DataFrame)->px.line:
             df.melt(id_vars = 'Timestamps',)            
             .sort_values('Timestamps variable'.split(),ignore_index=True)
             .plot(x = 'Timestamps', y = 'value', color = 'variable', title = 'Real Time Predictions for Dundalk IT')
-            .update_layout(yaxis2 = dict(side = 'right'))
-            .update_traces(selector = dict(name = 'EnvirTemp'), yaxis = 'y2', line = dict(width = 1,color = 'green'))
-            .update_traces(selector = dict(name = 'WindSpeed'), yaxis = 'y2', line = dict(width = 1,color = 'blue'))
             .update_traces(selector = dict(name = 'WindDirAbs'), line = dict(width = 1,color = 'orange'))
             .update_traces(selector = dict(name = 'PowerPrediction'), line = dict(width = 4,color = 'red'))
+            .update_layout(yaxis2 = dict(side = 'right',overlaying = 'y') )
+            .update_traces(selector = dict(name = 'EnvirTemp'), yaxis = 'y2', line = dict(width = 1,color = 'green'))
+            .update_traces(selector = dict(name = 'WindSpeed'), yaxis = 'y2', line = dict(width = 1,color = 'blue'))            
+            .update_layout(title_x = 0.5)
+            .update_layout(uirevision='None')
+        )
+
+def scatterPlotPower(df:pd.DataFrame,variable:str)->px.scatter:
+    return(
+            df.plot(x = variable, y = 'PowerPrediction', title = 'Scatter Plot of Power Prediction vs ' + variable, kind = 'scatter',trendline = 'ols')
+            .update_traces(marker = dict(size = 5,color = 'blue'))
             .update_layout(title_x = 0.5)
             .update_layout(uirevision='None')
         )

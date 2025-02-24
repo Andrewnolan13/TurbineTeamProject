@@ -4,7 +4,7 @@ from .weather.weather_variable_enums import ForecastMinutely15
 from .weather.utils import RequestLogger
 from .constants import SOURCE, GEO_COORDINATES
 from .models import FeedForwardNN
-from .utils import secondsTillEndOf
+from .utils import secondsTillEndOf, parseArgs
 
 import sqlite3
 import threading
@@ -26,9 +26,12 @@ class ForecastDaemon(threading.Thread):
         threading.Thread.__init__(self)
         self._stop_event = threading.Event()
         self._stop_event.clear()
+        
+        window = parseArgs().predictionWindow
+        self.timedelta = dt.timedelta(days = int(window), hours = int((window - int(window))*24))
     
     def _request(self)->pd.DataFrame:
-        self.api.end_minutely_15 = dt.datetime.now() + dt.timedelta(days = 7)
+        self.api.end_minutely_15 = dt.datetime.now() + self.timedelta
         self.api.start_minutely_15 = dt.datetime.now()
 
         response = self.api.request()
@@ -89,7 +92,7 @@ class ForecastDaemon(threading.Thread):
 
             sleepTimes = {k:secondsRemaining[k]/requestRemaining[k] for k in ['minutely','hourly','daily']}
             sleepTime = max(sleepTimes.values())
-            sleepTime = max(sleepTime,0.7)
+            sleepTime = max(sleepTime,secondsTillEndOf('minutely'))
             time.sleep(sleepTime)
             print("sleeping for",sleepTime)
 

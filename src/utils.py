@@ -1,6 +1,7 @@
 from typing import get_type_hints
 import os
 import datetime as dt
+import argparse
 
 def enforce_types(func):
     def wrapper(*args, **kwargs):
@@ -36,3 +37,8 @@ def secondsTillEndOf(t:str):
         return 86400 - dt.datetime.now().hour*3600 - dt.datetime.now().minute*60 - dt.datetime.now().second
     else:
         raise ValueError('Invalid time unit. Must be minutely, hourly or daily')
+    
+def parseArgs():
+    parser = argparse.ArgumentParser(description='Real-time Wind Turbine Forecasting Dashboard')
+    parser.add_argument('--predictionWindow', type = float, default = 7.0,help='The time window in days for which to make predictions. Can be a decimal.')
+    return parser.parse_args()
