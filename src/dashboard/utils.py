@@ -27,7 +27,7 @@ def plot_real_time_predictions(df:pd.DataFrame)->px.line:
 
 def scatterPlotPower(df:pd.DataFrame,variable:str)->px.scatter:
     return(
-            df.plot(x = variable, y = 'PowerPrediction', title = 'Scatter Plot of Power Prediction vs ' + variable, kind = 'scatter',trendline = 'ols')
+            df.plot(x = variable, y = 'PowerPrediction', title = 'Scatter Plot of Power Prediction vs ' + variable, kind = 'scatter')
             .update_traces(marker = dict(size = 5,color = 'blue'))
             .update_layout(title_x = 0.5)
             .update_layout(uirevision='None')
