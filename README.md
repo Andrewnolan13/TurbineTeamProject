@@ -18,4 +18,4 @@ Off-shore :
 
 GEt weather data for JAN FEB 2021, (Windspeed, and any other if possible)
 
-Week After: Atmospheric pressure, HUbheight for prediction
+Week After: Atmospheric pressure, Hubheight for prediction
