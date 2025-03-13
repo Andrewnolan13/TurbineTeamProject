@@ -96,7 +96,7 @@ def testLSTM(model, testloader, scaler):
 
 def getpredictions(model_class, model_weights, scaler_weights, dataset, seq_length):
 
-    scaler = torch.load(scaler_weights)
+    scaler = torch.load(scaler_weights,map_location=torch.device('cpu') if not torch.cuda.is_available() else None)
 
     scaled_data = scaler.transform(dataset)
 
@@ -106,7 +106,7 @@ def getpredictions(model_class, model_weights, scaler_weights, dataset, seq_leng
 
         # Initialize the model and load the saved weights
     model = model_class(input_size=scaled_tensor.shape[2], hidden_size=64, num_layers=2, output_size=1)  # Modify params as necessary
-    model.load_state_dict(torch.load(model_weights))
+    model.load_state_dict(torch.load(model_weights,map_location=torch.device('cpu') if not torch.cuda.is_available() else None))
     model.eval()  # Set model to evaluation mode
 
     with torch.no_grad():

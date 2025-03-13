@@ -8,3 +8,4 @@
 *.db-wal
 *copy*.db
 *.db
+data/Care_To_Compare
