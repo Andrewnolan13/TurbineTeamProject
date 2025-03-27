@@ -41,7 +41,7 @@ import datetime as dt
 from os.path import join
 
 anomaly_df = pd.read_pickle(join(SOURCE.str,'FaultPrediction','anomaly_df.pkl'))
-window = parseArgs().predictionWindow
+window = 1.1#parseArgs().predictionWindow
 timedelta = dt.timedelta(days = int(window), hours = int((window - int(window))*24))
 timedelta = pd.Timedelta(timedelta)
 
@@ -54,11 +54,11 @@ def getFaultPredictionData(start:pd.Timestamp=None)->pd.DataFrame:
     if start is None:
         start = anomaly_df.time_stamp.min()
     end = start + timedelta
-    return anomaly_df[(anomaly_df.time_stamp >= start) & (anomaly_df.time_stamp <= end)]
+    return anomaly_df.query('time_stamp >= @start and time_stamp <= @end')
     
 def makeFaultPredictionViz(df:pd.DataFrame)->Figure:
-    fig = anomaly_df.plot(x = 'time_stamp', y = 'reconstruction_error')
-    scatter = px.scatter(anomaly_df, x='time_stamp', y='reconstruction_error', color='is_anomaly_local')
+    fig = df.plot(x = 'time_stamp', y = 'reconstruction_error')
+    scatter = px.scatter(df, x='time_stamp', y='reconstruction_error', color='is_anomaly_local')
 
     fig.add_trace(scatter.data[0])
     fig.add_trace(scatter.data[1])
@@ -70,15 +70,49 @@ from ..weather.weather_variable_enums import HistoricalHourly
 from ..weather.utils import RequestLogger
 from ..constants import SOURCE, GEO_COORDINATES
 from ..models import FeedForwardNN
+import torch
+from sklearn.preprocessing import MinMaxScaler
+import sqlite3
 
-def getHistoricalPowerPredictions(start:pd.Timestamp=None)->pd.DataFrame:
-    if start is None:
-        start = anomaly_df.time_stamp.min()
-    end = start + timedelta
+# def getHistoricalPowerPredictions(start:pd.Timestamp=None)->pd.DataFrame:
+#     if start is None:
+#         start = anomaly_df.time_stamp.min()
+#     end = start + timedelta
 
 class _getHistoricalPowerPredictions:
     '''callable class because I only wanna make the api connection once'''
     def __init__(self):
+        self.__numCalls = 0
+        self.api = None
+
+    def __call__(self, start:pd.Timestamp=None)->pd.DataFrame:
+        if self.__numCalls == 0:
+            self.connect()         
+            self.__numCalls += 1
+
+        if start is None:
+            start = anomaly_df.time_stamp.min()
+        end = start + timedelta
+        self.api.start_date = start.to_pydatetime()-dt.timedelta(days=1)
+        self.api.end_date = end.to_pydatetime()+dt.timedelta(days=1)
+        # make request
+        try:
+            response = self.api.request()
+        except sqlite3.ProgrammingError as e:
+            if 'SQLite objects created in a thread can only be used in that same thread' in str(e):
+                self.connect()
+                self.api.start_date = start.to_pydatetime()-dt.timedelta(days=1)
+                self.api.end_date = end.to_pydatetime()+dt.timedelta(days=1)                
+                response = self.api.request()
+            else:
+                raise e
+        # return df with predictions
+        return self.__predict(self.__formatJsonToDataFrame(response,start,end))
+    
+    def connect(self):
+        # if self.api is not None:
+        #     self.api._conn.close()
+        # setup api
         api = HistoricalAPI()
         api.latitude, api.longitude = GEO_COORDINATES.DUNDALK_IT.value
         api.wind_speed_unit = WindSpeedUnit.METERS_PER_SECOND
@@ -87,17 +121,34 @@ class _getHistoricalPowerPredictions:
         api.temperature_unit = TemperatureUnit.CELSIUS
         self.api = api
 
-    def __call__(self, start:pd.Timestamp=None)->pd.DataFrame:
-        if start is None:
-            start = anomaly_df.time_stamp.min()
-        end = start + timedelta
-        self.api.start_date = start.to_pydatetime()
-        self.api.end_date = end.to_pydatetime()
-        
-        response = self.api.request()
+        # load NN
+        self.model = FeedForwardNN(3)
+        self.model.load_state_dict(torch.load(SOURCE.MODELS.FFNN.str))
+        self.xScaler:MinMaxScaler = torch.load(SOURCE.MODELS.xScaler_ffnn.str,weights_only=False)
+        self.yScaler:MinMaxScaler = torch.load(SOURCE.MODELS.yScaler_ffnn.str,weights_only=False)           
+
+    @staticmethod
+    def __formatJsonToDataFrame(response:dict,start:dt.datetime,end:dt.datetime)->pd.DataFrame:
+        '''
+        makes json into df
+        '''
+        return (
+            pd.DataFrame(response[0]['hourly'])
+                .rename(columns={'time': 'Timestamps', 'wind_speed_100m': 'WindSpeed', 'wind_direction_100m': 'WindDirAbs', 'temperature_2m': 'EnvirTemp'})
+                .assign(Timestamps = lambda x: x.Timestamps.astype('str'),
+                        WindSpeed = lambda x: x.WindSpeed.astype('float'),
+                        WindDirAbs = lambda x: x.WindDirAbs.astype('float'),
+                        EnvirTemp = lambda x: x.EnvirTemp.astype('float'))
+                [['Timestamps', 'WindSpeed', 'WindDirAbs', 'EnvirTemp']]
+                .loc[lambda x: x.Timestamps>=start.strftime('%Y-%m-%d %H:%M:%S')]
+                .loc[lambda x: x.Timestamps<=end.strftime('%Y-%m-%d %H:%M:%S')]
+        )
+
+    def __predict(self,df:pd.DataFrame)->pd.DataFrame:
+        x = self.xScaler.transform(df[['WindSpeed','WindDirAbs','EnvirTemp']])
+        x = torch.tensor(x).float()
+        y = self.model(x)
+        y = self.yScaler.inverse_transform(y.detach().numpy())
+        return df.assign(PowerPrediction = y)
     
-    def __formatJsonToDataFrame(response:dict)->pd.DataFrame:
-        '''
-        
-        '''
-        pass
+getHistoricalPowerPredictions = _getHistoricalPowerPredictions()

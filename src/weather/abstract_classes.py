@@ -452,7 +452,7 @@ class AbstractHistoricalAPI(OpenMeteoAPI):
         self._start_date = value
 
     @property
-    def end_date(self)->dt.datetime|None:
+    def end_date(self)->str|None:
         if self._end_date is None:
             raise NotImplementedError("end_date is None, it must be manually set before use")
         return self._end_date.strftime('%Y-%m-%d')

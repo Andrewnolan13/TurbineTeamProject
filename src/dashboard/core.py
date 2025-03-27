@@ -1,6 +1,6 @@
 import dash
 from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import datetime as dt
 
 import pandas as pd
@@ -84,15 +84,25 @@ def update_tab_content(tab):
                              children=dcc.Graph(id='historicalPowerPred', figure=plot_real_time_predictions(powerPredictions), config={'displayModeBar': False}, style={'height': '100%', 'width': '100%'}),
                          ),
                          html.Div(style={'display': 'flex', 'flexDirection': 'column', 'width': '100%', 'height': '100%', 'border': '2px solid black', 'padding': '10px', 'margin-bottom': '20px'},
-                                  children=[
-                                      dcc.Dropdown(
-                                          id='variable-dropdown',
-                                          options=[{'label': i, 'value': i} for i in variables],
-                                          value=variables[0],
-                                      ),
-                                      dcc.Graph(id='faultPredictions', figure=makeFaultPredictionViz(faultPredictionData) , config={'displayModeBar': False}, style={'height': '100%', 'width': '100%'}),
-                                  ]),
+                                  children=dcc.Graph(id='faultPredictions', figure=makeFaultPredictionViz(faultPredictionData) , config={'displayModeBar': False}, style={'height': '100%', 'width': '100%'}),
+                                  ),                                  
                      ]),
+            dcc.Slider(
+                id='time-slider',
+                min=0,
+                max=300,  # Assuming sorted time index
+                step=1,  # Each step corresponds to a 10-min interval
+                marks={i: (faultPredictionData.time_stamp.min().to_pydatetime()+ dt.timedelta(minutes = 10)).strftime('%Y-%m-%d %H:%M') for i in range(0, 300,144)},  # Show labels every 24 hours
+                value=[0, 300]
+            ),
+            dcc.Interval(
+                id='slider-interval-component',
+                interval=1000,  # 1 second per step
+                n_intervals=0,
+                disabled=True  # Start disabled
+            ),
+            html.Button("Play", id="play-button", n_clicks=0),            
+
         ])            
 
 # Update real-time data only when on Tab 1
@@ -108,6 +118,24 @@ def updateRealTimePredictionsTab(n: int, variable: str):
     scatterPlot = scatterPlotPower(df, variable)
     timeStamp = f"Last updated: {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     return timeStamp, realtimePlot, scatterPlot
+
+@app.callback(
+    Output('time-slider', 'value'),
+    Output('interval-component', 'disabled'),
+    Input('interval-component', 'n_intervals'),
+    Input('play-button', 'n_clicks'),
+    State('time-slider', 'value')
+)
+def play_slider(n_intervals, play_clicks, current_value):
+    print(f"Play clicks: {play_clicks}")
+    ctx = dash.callback_context
+    if not ctx.triggered or ctx.triggered[0]['prop_id'].split('.')[0] == 'play-button':
+        return current_value, not (play_clicks % 2)  # Toggle play/pause
+    
+    next_value = min(current_value + 1, 300)
+    return next_value, False  # Keep playing until the end
+
+
 
 
 
