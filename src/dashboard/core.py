@@ -6,7 +6,7 @@ import datetime as dt
 import pandas as pd
 import sqlite3
 
-from .utils import map_of_Ireland, plot_real_time_predictions, scatterPlotPower
+from .utils import plot_real_time_predictions, scatterPlotPower, getFaultPredictionData, getHistoricalPowerPredictions, makeFaultPredictionViz
 from ..constants import SOURCE
 
 # Placeholder function for getting data
@@ -72,11 +72,28 @@ def update_tab_content(tab):
     
     elif tab == "tab-2":
         print("Tab 2")
-        df = get_data()#pd.DataFrame({"Sensor": [f"Sensor {i}" for i in range(1, 6)], "Reading": [i * 10 for i in range(1, 6)]})
+        faultPredictionData = getFaultPredictionData() #<- will be time series with reconstruction errors.
+        powerPredictions = getHistoricalPowerPredictions()
         return html.Div([
             html.H2("COME UP WITH A TITLE", style={'textAlign': 'center'}),
-            dash_table.DataTable(df.to_dict("records"), [{"name": i, "id": i} for i in df.columns])
-        ])
+            # dash_table.DataTable(df.to_dict("records"), [{"name": i, "id": i} for i in df.columns])
+            html.Div(style={'display': 'flex', 'height': '1000px'},
+                     children=[
+                         html.Div(
+                             style={'border': '2px solid black', 'padding': '10px', 'margin-bottom': '20px', 'height': '100%', 'width': '100%'},
+                             children=dcc.Graph(id='historicalPowerPred', figure=plot_real_time_predictions(powerPredictions), config={'displayModeBar': False}, style={'height': '100%', 'width': '100%'}),
+                         ),
+                         html.Div(style={'display': 'flex', 'flexDirection': 'column', 'width': '100%', 'height': '100%', 'border': '2px solid black', 'padding': '10px', 'margin-bottom': '20px'},
+                                  children=[
+                                      dcc.Dropdown(
+                                          id='variable-dropdown',
+                                          options=[{'label': i, 'value': i} for i in variables],
+                                          value=variables[0],
+                                      ),
+                                      dcc.Graph(id='faultPredictions', figure=makeFaultPredictionViz(faultPredictionData) , config={'displayModeBar': False}, style={'height': '100%', 'width': '100%'}),
+                                  ]),
+                     ]),
+        ])            
 
 # Update real-time data only when on Tab 1
 @app.callback(
