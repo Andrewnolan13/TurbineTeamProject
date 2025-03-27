@@ -52,7 +52,7 @@ def eval_model(model, train_loader, device, k=6):
             train_errors.extend(batch_loss.cpu().numpy())
 
     train_errors = np.array(train_errors)
-
+    train_errors = np.nan_to_num(train_errors, nan=0.0)
 
     # Option 1: Standard Deviation method
     k = 6  # can be tuned (e.g., 2 or 3)
