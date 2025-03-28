@@ -77,7 +77,7 @@ def update_tab_content(tab):
         return html.Div([
             html.H2("COME UP WITH A TITLE", style={'textAlign': 'center'}),
             # dash_table.DataTable(df.to_dict("records"), [{"name": i, "id": i} for i in df.columns])
-            html.Div(style={'display': 'flex', 'height': '1000px'},
+            html.Div(style={'display': 'flex', 'height': '800px'},
                      children=[
                          html.Div(
                              style={'border': '2px solid black', 'padding': '10px', 'margin-bottom': '20px', 'height': '100%', 'width': '100%'},
@@ -92,8 +92,8 @@ def update_tab_content(tab):
                 min=0,
                 max=300,  # Assuming sorted time index
                 step=1,  # Each step corresponds to a 10-min interval
-                marks={i: (faultPredictionData.time_stamp.min().to_pydatetime()+ dt.timedelta(minutes = 10)).strftime('%Y-%m-%d %H:%M') for i in range(0, 300,144)},  # Show labels every 24 hours
-                value=[0, 300]
+                marks={i: (faultPredictionData.time_stamp.min().to_pydatetime()+ dt.timedelta(minutes = 10)).strftime('%Y-%m-%d %H:%M') for i in range(0, 300,10)}, 
+                value=0
             ),
             dcc.Interval(
                 id='slider-interval-component',
@@ -101,7 +101,7 @@ def update_tab_content(tab):
                 n_intervals=0,
                 disabled=True  # Start disabled
             ),
-            html.Button("Play", id="play-button", n_clicks=0),            
+            html.Button("Play", id="play-button",n_clicks=0),            
 
         ])            
 
@@ -119,23 +119,29 @@ def updateRealTimePredictionsTab(n: int, variable: str):
     timeStamp = f"Last updated: {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     return timeStamp, realtimePlot, scatterPlot
 
+# import random
 @app.callback(
     Output('time-slider', 'value'),
-    Output('interval-component', 'disabled'),
-    Input('interval-component', 'n_intervals'),
-    Input('play-button', 'n_clicks'),
+    Input('slider-interval-component', 'n_intervals'),
     State('time-slider', 'value')
 )
-def play_slider(n_intervals, play_clicks, current_value):
-    print(f"Play clicks: {play_clicks}")
-    ctx = dash.callback_context
-    if not ctx.triggered or ctx.triggered[0]['prop_id'].split('.')[0] == 'play-button':
-        return current_value, not (play_clicks % 2)  # Toggle play/pause
-    
+def play_slider(n_intervals,current_value):
     next_value = min(current_value + 1, 300)
-    return next_value, False  # Keep playing until the end
+    return next_value  # Keep playing until the end
 
+@app.callback(
+    Output("slider-interval-component", "disabled"),
+    Input("play-button", "n_clicks"),
+    State("slider-interval-component", "disabled"),
+)
+def toggle(n, playing):
+    print('pressed')
+    if n:
+        return not playing
+    return playing
 
+# @app.callback(
 
-
+# )
+# def updateDemoGraphs
 
