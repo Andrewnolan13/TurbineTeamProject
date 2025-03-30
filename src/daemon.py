@@ -101,7 +101,12 @@ class ForecastDaemon(threading.Thread):
     def stop(self):
         self._stop_event.set()
         self.join()
-    
+
+# class FaultPredictionDaemon(threading.Thread):
+#     '''
+#     '''
+#     def __init__(self):
+        
 
 
         

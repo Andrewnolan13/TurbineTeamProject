@@ -86,9 +86,9 @@ class _getHistoricalPowerPredictions:
         self.api = None
 
     def __call__(self, start:pd.Timestamp=None)->pd.DataFrame:
-        if self.__numCalls == 0:
-            self.connect()         
-            self.__numCalls += 1
+        # if self.__numCalls == 0:
+        self.connect()         
+            # self.__numCalls += 1
 
         if start is None:
             start = anomaly_df.time_stamp.min()
@@ -97,13 +97,13 @@ class _getHistoricalPowerPredictions:
         self.api.end_date = end.to_pydatetime()+dt.timedelta(days=1)
         # make request
         try:
-            response = self.api.request()
+            response = self.api.request_from_database()
         except sqlite3.ProgrammingError as e:
             if 'SQLite objects created in a thread can only be used in that same thread' in str(e):
                 self.connect()
                 self.api.start_date = start.to_pydatetime()-dt.timedelta(days=1)
                 self.api.end_date = end.to_pydatetime()+dt.timedelta(days=1)                
-                response = self.api.request()
+                response = self.api.request_from_database()
             else:
                 raise e
         # return df with predictions
@@ -125,7 +125,7 @@ class _getHistoricalPowerPredictions:
         self.model = FeedForwardNN(3)
         self.model.load_state_dict(torch.load(SOURCE.MODELS.FFNN.str))
         self.xScaler:MinMaxScaler = torch.load(SOURCE.MODELS.xScaler_ffnn.str,weights_only=False)
-        self.yScaler:MinMaxScaler = torch.load(SOURCE.MODELS.yScaler_ffnn.str,weights_only=False)           
+        self.yScaler:MinMaxScaler = torch.load(SOURCE.MODELS.yScaler_ffnn.str,weights_only=False)
 
     @staticmethod
     def __formatJsonToDataFrame(response:dict,start:dt.datetime,end:dt.datetime)->pd.DataFrame:

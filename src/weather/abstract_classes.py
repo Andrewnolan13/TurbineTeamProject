@@ -47,6 +47,7 @@ from beartype import beartype
 import requests
 from abc import ABC
 import sqlite3
+import os
 
 from ..constants import SOURCE
 from .. import exceptions
@@ -65,6 +66,7 @@ from .weather_variable_enums import (ForecastHourly,
 class OpenMeteoAPI(ABC):
     @beartype
     def __init__(self,base_url:str):
+        # self.__thread_id:int = os.getpid()
         self.base_url:str = base_url
         self._conn:sqlite3.Connection = sqlite3.connect(SOURCE.DATA.DB.str)#TODO: think about re opening the connection every few minutes or something.
         cursor = self._conn.cursor()
@@ -89,7 +91,8 @@ class OpenMeteoAPI(ABC):
         self._apikey:str|None = None
     
     def __del__(self):
-        if self._conn is not None:
+        if self._conn is not None and self._conn.in_transaction:
+            # Close the connection if it was opened in this thread
             self._conn.close()
     
     def _reConnect(self):

@@ -76,7 +76,6 @@ def update_tab_content(tab):
         powerPredictions = getHistoricalPowerPredictions()
         return html.Div([
             html.H2("COME UP WITH A TITLE", style={'textAlign': 'center'}),
-            # dash_table.DataTable(df.to_dict("records"), [{"name": i, "id": i} for i in df.columns])
             html.Div(style={'display': 'flex', 'height': '800px'},
                      children=[
                          html.Div(
@@ -92,8 +91,9 @@ def update_tab_content(tab):
                 min=0,
                 max=300,  # Assuming sorted time index
                 step=1,  # Each step corresponds to a 10-min interval
-                marks={i: (faultPredictionData.time_stamp.min().to_pydatetime()+ dt.timedelta(minutes = 10)).strftime('%Y-%m-%d %H:%M') for i in range(0, 300,10)}, 
-                value=0
+                marks={i: (faultPredictionData.time_stamp.min().to_pydatetime()+ dt.timedelta(minutes = 10*i)).strftime('%Y-%m-%d %H:%M') for i in range(0, 300)},                 
+                value=0,
+                # rotate 45 degrees                
             ),
             dcc.Interval(
                 id='slider-interval-component',
@@ -140,6 +140,17 @@ def toggle(n, playing):
         return not playing
     return playing
 
+@app.callback(
+    Output('faultPredictions', 'figure'),
+    Output('historicalPowerPred', 'figure'),        
+    Input('time-slider', 'value'),
+    State('time-slider', 'marks'),
+)
+def updateFaultTab(value, marks):
+    start = pd.Timestamp(marks[str(value)])
+    faultPredictionData = getFaultPredictionData(start) 
+    powerPredictions = getHistoricalPowerPredictions(start)
+    return plot_real_time_predictions(powerPredictions), makeFaultPredictionViz(faultPredictionData)
 # @app.callback(
 
 # )
