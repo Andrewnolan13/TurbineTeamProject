@@ -22,7 +22,7 @@ app = dash.Dash(__name__)
 app.layout = html.Div([
     dcc.Tabs(id="tabs", value="tab-1", children=[
         dcc.Tab(label="Real-Time Dashboard", value="tab-1"),
-        dcc.Tab(label="Placeholder Tab", value="tab-2")
+        dcc.Tab(label="Fault Prediction", value="tab-2")
     ]),
     
     html.Div(id="tabs-content"),
@@ -75,7 +75,7 @@ def update_tab_content(tab):
         faultPredictionData = getFaultPredictionData() #<- will be time series with reconstruction errors.
         powerPredictions = getHistoricalPowerPredictions()
         return html.Div([
-            html.H2("COME UP WITH A TITLE", style={'textAlign': 'center'}),
+            html.H2("\"Real-Time\" Fault prediction along side Power Prediciton", style={'textAlign': 'center'}),
             html.Div(style={'display': 'flex', 'height': '800px'},
                      children=[
                          html.Div(
