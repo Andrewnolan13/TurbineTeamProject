@@ -19,3 +19,11 @@ Off-shore :
 GEt weather data for JAN FEB 2021, (Windspeed, and any other if possible)
 
 Week After: Atmospheric pressure, Hubheight for prediction
+
+How to run:
+1. clone the repo
+2. cd to the TurbineTeamProject repo
+3. run
+   ```bash
+   python -m src
+   ```
