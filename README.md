@@ -27,3 +27,7 @@ How to run:
    ```bash
    python -m src
    ```
+4. NB if it's your first time to run the dashboard, you will need to create and fill up the database or else the dashboard will be painfully slow on first run. In order to do that, run the following command
+   ```bash
+   python first_run.py
+   ``` 
